@@ -17,21 +17,21 @@ ClickCoordinates coordinates (){
     int x=-1,y=-1;
     XEvent event;
     int button;
-    Display *display = XOpenDisplay(NULL);
+    Display *d = XOpenDisplay(NULL);
 
-    if (display == NULL) {
+    if (d == NULL) {
         fprintf(stderr, "Cannot connect to X server!\n");
         exit (EXIT_FAILURE);
     }
 
-    Window root= XDefaultRootWindow(display);
-    XGrabPointer(display, root, False, ButtonPressMask, GrabModeAsync,
+    Window root = XDefaultRootWindow(d);
+    XGrabPointer(d, root, False, ButtonPressMask, GrabModeAsync,
          GrabModeAsync, None, None, CurrentTime);
 
-    XSelectInput(display, root, ButtonReleaseMask) ;
+    XSelectInput(d, root, ButtonReleaseMask) ;
 
     while(1){
-        XNextEvent(display,&event);
+        XNextEvent(d,&event);
         switch(event.type){
         case ButtonPress:
             switch(event.xbutton.button){
@@ -50,7 +50,7 @@ ClickCoordinates coordinates (){
         if(x>=0 && y>=0)break;
     }
     
-    XCloseDisplay(display);
+    XCloseDisplay(d);
     click.x = x;
     click.y = y;
     return click;

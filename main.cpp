@@ -1,33 +1,42 @@
 #include <iostream>
 #include <string>
+#include <list>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-
-Display* d = XOpenDisplay((char *)NULL);
-int s = DefaultScreen(d);
-Window win = XCreateSimpleWindow(d, DefaultRootWindow(d), 0, 0, 320, 200, 1, WhitePixel(d, s), WhitePixel(d, s));
 
 struct ClickCoordinates {
     int x;
     int y;
 };
 
-struct PalletColor { //TODO
+class PalletColor { //TODO
     GC gc_color;
     XGCValues gc_values;
-    int createColor() {
-        gc_values.function = GXcopy;
-        gc_values.plane_mask = AllPlanes;
-        gc_values.foreground = hex;
-        gc_color = XCreateGC(d, win, GCFunction | GCPlaneMask | GCForeground, &gc_values);
-    }
+    unsigned long hex;
+    Display* d;
+    Window win;
+    public:
+        PalletColor (unsigned long hexa, Display* dis, Window window) {
+            hex = hexa;
+            d = dis;
+            win = window;
+            PalletColor::createColor();
+        }
+
+        void createColor() {
+            gc_values.function = GXcopy;
+            gc_values.plane_mask = AllPlanes;
+            gc_values.foreground = hex;
+            gc_color = XCreateGC(d, win, GCFunction | GCPlaneMask | GCForeground, &gc_values);
+        }
 };
+
 
 unsigned long rgbToHex(int r, int g, int b) {
         return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
 }
 
-ClickCoordinates coordinates (){
+ClickCoordinates coordinates (Display* d){
     int x=-1,y=-1;
     int button;
     ClickCoordinates click;
@@ -66,23 +75,25 @@ ClickCoordinates coordinates (){
 
     click.x = x;
     click.y = y;
-    XCloseDisplay(d);
     return click;
 }
 
 int main(int, char**) {
+    Display* d = XOpenDisplay((char *)NULL);
+    int s = DefaultScreen(d);
+    Window root = XDefaultRootWindow(d);
+    Window win = XCreateSimpleWindow(d, DefaultRootWindow(d), 0, 0, 320, 200, 1, WhitePixel(d, s), WhitePixel(d, s));
     ClickCoordinates click;
     XColor c;
     Window w;
     GC gc;
     XEvent event;
-
-    Window root = XDefaultRootWindow(d);
     XGCValues gc_values;
     GC gc_box;
+    std::list<PalletColor> colors;
 
     
-    click = coordinates();
+    click = coordinates(d);
     int x=click.x;  // Pixel x 
     int y=click.y;  // Pixel y
 
@@ -97,10 +108,7 @@ int main(int, char**) {
     XSelectInput(d, win, ButtonReleaseMask | ExposureMask);
     gc = XCreateGC(d, win, 0, 0);
 
-    gc_values.function = GXcopy;
-    gc_values.plane_mask = AllPlanes;
-    gc_values.foreground = hex;
-    gc_box = XCreateGC(d, win, GCFunction | GCPlaneMask | GCForeground, &gc_values);
+    colors.push_back(PalletColor(hex, d, win));
     
     XClearWindow(d, win);
     XMapRaised(d, win);
@@ -112,7 +120,7 @@ int main(int, char**) {
         XNextEvent(d, &event);
         switch(event.type){
             case Expose:
-                XFillRectangle(d, win, gc_box, 20, 20, 30, 30);
+                XFillRectangle(d, win, gc_box, 20, 20, 30, 30); //Turn this into a loop that accepts "colors"
                 break;
             case ButtonPress:
                 switch(event.xbutton.button){
@@ -133,6 +141,5 @@ int main(int, char**) {
 
 
 }
-
 
 

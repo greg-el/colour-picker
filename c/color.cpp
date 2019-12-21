@@ -10,11 +10,8 @@
 extern "C"
 #endif
 
-unsigned long rgbToHex(int r, int g, int b) {
-        return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
-}
 
-unsigned long hex(int x, int y) {
+unsigned long makeHex(int x, int y) {
     Display* d = XOpenDisplay((char *)NULL);
     XColor c;
     XImage *image;
@@ -22,7 +19,7 @@ unsigned long hex(int x, int y) {
     c.pixel = XGetPixel(image,0,0);
     XFree (image);
     XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-    unsigned long hex = rgbToHex(c.red, c.green, c.blue);
+    unsigned long hex = ((c.red & 0xff) << 16) + ((c.green & 0xff) << 8) + (c.blue & 0xff);
     XCloseDisplay(d);
     return hex;
 }

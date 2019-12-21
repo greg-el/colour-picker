@@ -46,7 +46,6 @@ ClickCoordinates coordinates (Display* d){
     ClickCoordinates click;
     XEvent event;
 
-
     if (d == NULL) {
         fprintf(stderr, "Cannot connect to X server!\n");
         exit (EXIT_FAILURE);

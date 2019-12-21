@@ -1,7 +1,7 @@
 #include <X11/Xlib.h>
 #include <iostream>
 #include <array>
-//Compile hint: ++ -shared -Wall -fPIC -Wl,-soname,coords -o soords.so coords.cpp -lX11
+//Compile hint: ++ -shared -Wall -fPIC -Wl,-soname,coords -o ../obj/coords.so coords.cpp -lX11
 
 #ifdef __cplusplus
 extern "C"

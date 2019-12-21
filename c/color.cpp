@@ -3,14 +3,18 @@
 #include <X11/Xutil.h>
 #include <array>
 
-//Compile hint: g++ -shared -Wall -fPIC -Wl,-soname,color -o color.so color.cpp -lX11
+//Compile hint: g++ -shared -Wall -fPIC -Wl,-soname,color -o ../obj/color.so color.cpp -lX11
+
 
 #ifdef __cplusplus
 extern "C"
 #endif
 
-std::array<unsigned int, 3>rgb(int x, int y) {
-    std::array<unsigned int, 3> rgbOutput;
+unsigned long rgbToHex(int r, int g, int b) {
+        return ((r & 0xff) << 16) + ((g & 0xff) << 8) + (b & 0xff);
+}
+
+unsigned long hex(int x, int y) {
     Display* d = XOpenDisplay((char *)NULL);
     XColor c;
     XImage *image;
@@ -18,10 +22,7 @@ std::array<unsigned int, 3>rgb(int x, int y) {
     c.pixel = XGetPixel(image,0,0);
     XFree (image);
     XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-    rgbOutput[0] = c.red/256;
-    rgbOutput[1] = c.green/256;
-    rgbOutput[2] = c.blue/256;
-    std::cout << rgbOutput[2];
-    return rgbOutput;
+    unsigned long hex = rgbToHex(c.red, c.green, c.blue);
+    XCloseDisplay(d);
+    return hex;
 }
-

@@ -1,31 +1,40 @@
 import sys
-import os
-from ctypes import *
-
-click = cdll.LoadLibrary("./test.so")
-click.argtypes
-click.getClickCoordinates()
-
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
+from os import getenv
+import time
+import ctypes
 from Xlib import X, display
-from PyQt5 import QtWidgets
-
-def get_coordinates():
-    d = display.Display()
-    screen = display.screen()
-    win = X.PointerWindow
-    screen.root.xinput_select_events([xinput.AllDevices])
-    while True:
-        event = display.next_event()
-        print(event)
-        if event.type == ButtonPress:
-            print(event.xbutton.button)
-
-app = QtWidgets.QApplication(sys.argv)
-add_button = QtWidgets.QPushButton("Add")
+#from PyQt5 import QtWidgets
+coord = ctypes.CDLL('./coords.so')
+coord.coordinates.restype = ctypes.c_int * 2
+get_RGB = ctypes.CDLL('./color.so')
+get_RGB.rgb.argtypes = [ctypes.c_int, ctypes.c_int]
+get_RGB.rgb.restype = ctypes.c_uint * 3
 
 
+class RGB_Values():
+    def __init__(self, arr):
+        self.r = arr[0]
+        self.g = arr[1]
+        self.b = arr[2]
+    
+    def __str__(self):
+        return f'r:{self.r} g:{self.g} b:{self.b}'
 
-sys.exit(app.exec_())
+class Click_Coordinates():
+    def __init__(self, arr):
+        self.x = arr[0]
+        self.y = arr[1]
+
+    def __str__(self):
+        return f'x:{self.x} y:{self.y}'
+
+
+if __name__ == "__main__":
+    coords = coord.coordinates()
+    c = Click_Coordinates([x for x in coords])
+    rgb_test = get_RGB.rgb(c.x, c.y)
+    for i in rgb_test:
+        print(i)
+    test_color = RGB_Values([x for x in rgb_test]) #TODO blue is always wrong and i dont know why
+
+    

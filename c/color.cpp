@@ -15,11 +15,11 @@ unsigned long makeHex(int x, int y) {
     Display* d = XOpenDisplay((char *)NULL);
     XColor c;
     XImage *image;
-    image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, 1, 1, AllPlanes, XYPixmap);
+    image = XGetImage(d, XRootWindow (d, XDefaultScreen (d)), x, y, 1, 1, AllPlanes, XYPixmap);
     c.pixel = XGetPixel(image,0,0);
-    XFree (image);
+    XFree(image);
     XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-    unsigned long hex = ((c.red & 0xff) << 16) + ((c.green & 0xff) << 8) + (c.blue & 0xff);
+    unsigned long hex = ((c.red/256 & 0xff) << 16) + ((c.green/256 & 0xff) << 8) + (c.blue/256 & 0xff);
     XCloseDisplay(d);
     return hex;
 }

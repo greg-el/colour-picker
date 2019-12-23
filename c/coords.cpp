@@ -1,7 +1,7 @@
 #include <X11/Xlib.h>
 #include <iostream>
 #include <array>
-//Compile hint: ++ -shared -Wall -fPIC -Wl,-soname,coords -o ../obj/coords.so coords.cpp -lX11
+//Compile hint: g++ -shared -Wall -fPIC -Wl,-soname,coords -o ../obj/coords.so coords.cpp -lX11
 
 #ifdef __cplusplus
 extern "C"
@@ -43,7 +43,8 @@ std::array<int, 2> coordinates (){
         if(x>=0 && y>=0)break;
     }
 
-
+    XUngrabPointer(d, CurrentTime);
+    XCloseDisplay(d);
     coords[0] = x;
     coords[1] = y;
     return coords;

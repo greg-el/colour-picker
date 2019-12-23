@@ -1,12 +1,12 @@
-import sys
-from os import getenv
-import time
 import ctypes
-import pyperclip
-from Xlib import X, display
-from PyQt5.QtWidgets import QWidget, QApplication, QPushButton
-from PyQt5.QtCore import pyqtSlot, QRect, Qt
+import sys
+import time
+from os import getenv
 
+import pyperclip
+from PyQt5.QtCore import QRect, Qt, pyqtSlot
+from PyQt5.QtWidgets import QApplication, QPushButton, QWidget
+from Xlib import X, display
 
 coord = ctypes.CDLL('./obj/coords.so')
 coord.coordinates.restype = ctypes.c_int * 2
@@ -26,15 +26,12 @@ class UI(QWidget):
 
         
     def initUI(self):
-        
         self.setWindowTitle("Pallet")
+        self.setAttribute(Qt.WA_TranslucentBackground);
         self.addColorButton.clicked.connect(self.addButton)
         self.addColorButton.setStyleSheet("border-radius: 3px; height:40px; width:60px; background-color: #FFFFF6;")
-
-        #addColorButton.setStyleSheet(open('mystylesheet.css').read())
-        self.setAttribute(Qt.WA_TranslucentBackground);
-        self.setGeometry(300, 300, 1, 1)
         self.addColorButton.show()
+        self.setGeometry(50, 50, 60, 40)
         self.show()
         
 
@@ -50,12 +47,21 @@ class UI(QWidget):
         if self.num_buttons < 8:
             buttonX = self.num_buttons*60 
             buttonY = 0
-            windowHeight = 40
+
             addColorButtonX = 60+self.num_buttons*60
+            addColorButtonY = 0
+
+            windowHeight = 40
             windowWidth = 60+buttonX+60
         elif self.num_buttons >= 8:
             buttonX = (self.num_buttons-8)*60
             buttonY = 80
+
+            addColorButtonX = 60+(self.num_buttons-8)*60
+            addColorButtonY = 80
+
+            windowHeight = 80
+            windowWidth = 480+60
         
         self.addColorButton.move(addColorButtonX, 0)
         self.setGeometry(self.x, self.y, windowWidth, windowHeight)
@@ -70,6 +76,123 @@ class UI(QWidget):
     def printName(self, button):
         pyperclip.copy(button.text())
 
+from PyQt5.QtCore import QPoint, QRect, QSize, Qt
+from PyQt5.QtWidgets import (QApplication, QLayout, QPushButton, QSizePolicy,
+        QWidget)
+
+
+class Window(QWidget):
+    def __init__(self):
+        super(Window, self).__init__()
+        self.flowLayout = FlowLayout()
+        addColorButton = QPushButton("+", self)
+        addColorButton.clicked.connect(self.addButton)
+        addColorButton.setStyleSheet("border-radius: 3px; height:40px; width:60px; background-color: #FFFFF6;")
+        self.flowLayout.addWidget(addColorButton)
+        self.setLayout(self.flowLayout)
+        self.setWindowTitle("Pallet")
+        self.setAttribute(Qt.WA_TranslucentBackground);
+
+    @pyqtSlot()
+    def addButton(self):
+        color = getClickColor()
+        button = QPushButton("#"+color, self)
+        button.setStyleSheet("border-radius: 3px; height:40px; width:60px; background-color: {}".format("#" + color))
+        button.clicked.connect(lambda:self.printName(button))
+        self.flowLayout.addWidget(button)
+        if self.flowLayout.count() <= 8:
+            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width()+self.flowLayout.count()*60, self.frameGeometry().height()))
+        elif self.flowLayout.count() > 8:
+            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), self.frameGeometry().height()+40))
+
+    @pyqtSlot()
+    def printName(self, button):
+        pyperclip.copy(button.text())
+
+    def moveEvent(self, e):
+        self.x = self.pos().x()
+        self.y = self.pos().y()
+        super(Window, self).moveEvent(e)
+
+class FlowLayout(QLayout):
+    def __init__(self, parent=None, margin=0, spacing=0):
+        super(FlowLayout, self).__init__(parent)
+
+        if parent is not None:
+            self.setContentsMargins(margin, margin, margin, margin)
+
+        self.setSpacing(spacing)
+        self.itemList = []
+
+        
+
+    def __del__(self):
+        item = self.takeAt(0)
+        while item:
+            item = self.takeAt(0)
+
+    def addItem(self, item):
+        self.itemList.append(item)
+
+    def count(self):
+        return len(self.itemList)
+
+    def itemAt(self, index):
+        if index >= 0 and index < len(self.itemList):
+            return self.itemList[index]
+
+        return None
+
+    def takeAt(self, index):
+        if index >= 0 and index < len(self.itemList):
+            return self.itemList.pop(index)
+
+        return None
+
+    def expandingDirections(self):
+        return Qt.Orientations(Qt.Orientation(0))
+
+    def hasHeightForWidth(self):
+        return False
+
+    def heightForWidth(self, width):
+        height = self.doLayout(QRect(0, 0, width, 0), True)
+        return height
+
+    def setGeometry(self, rect):
+        super(FlowLayout, self).setGeometry(rect)
+        self.doLayout(rect, False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize(60, 40)
+        print(self.itemList)
+        return size
+
+    def doLayout(self, rect, testOnly):
+        x = rect.x()
+        y = rect.y()
+        lineHeight = 0
+        for item in self.itemList:
+            wid = item.widget()
+            spaceX = self.spacing() + wid.style().layoutSpacing(QSizePolicy.PushButton, QSizePolicy.PushButton, Qt.Horizontal)
+            spaceY = self.spacing() + wid.style().layoutSpacing(QSizePolicy.PushButton, QSizePolicy.PushButton, Qt.Vertical)
+            nextX = x + item.sizeHint().width() + spaceX
+            if nextX - spaceX > rect.right() and lineHeight > 0:
+                x = rect.x()
+                y = y + lineHeight + spaceY
+                nextX = x + item.sizeHint().width() + spaceX
+                lineHeight = 0
+
+            if not testOnly:
+                item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+
+            x = nextX
+            lineHeight = max(lineHeight, item.sizeHint().height())
+
+        return y + lineHeight - rect.y()
 
 
 
@@ -91,10 +214,6 @@ def getClickColor():
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    ui = UI()
+    ui = Window()
+    ui.show()
     sys.exit(app.exec_())
-    
-
-
-
-    

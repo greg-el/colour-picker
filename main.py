@@ -4,8 +4,8 @@ import time
 from os import getenv
 
 import pyperclip
-from PyQt5.QtCore import QRect, Qt, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QPushButton, QWidget
+from PyQt5.QtCore import QPoint, QRect, QSize, Qt, pyqtSlot
+from PyQt5.QtWidgets import (QApplication, QLayout, QPushButton, QSizePolicy, QWidget)
 from Xlib import X, display
 
 coord = ctypes.CDLL('./obj/coords.so')
@@ -76,9 +76,7 @@ class UI(QWidget):
     def printName(self, button):
         pyperclip.copy(button.text())
 
-from PyQt5.QtCore import QPoint, QRect, QSize, Qt
-from PyQt5.QtWidgets import (QApplication, QLayout, QPushButton, QSizePolicy,
-        QWidget)
+
 
 
 class Window(QWidget):
@@ -101,9 +99,11 @@ class Window(QWidget):
         button.clicked.connect(lambda:self.printName(button))
         self.flowLayout.addWidget(button)
         if self.flowLayout.count() <= 8:
-            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width()+self.flowLayout.count()*60, self.frameGeometry().height()))
+            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.flowLayout.count()*60, self.frameGeometry().height()))
         elif self.flowLayout.count() > 8:
-            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), self.frameGeometry().height()+40))
+            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 80))
+        elif self.flowLayout.count() > 16:
+            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 120))
 
     @pyqtSlot()
     def printName(self, button):
@@ -123,8 +123,6 @@ class FlowLayout(QLayout):
 
         self.setSpacing(spacing)
         self.itemList = []
-
-        
 
     def __del__(self):
         item = self.takeAt(0)
@@ -168,7 +166,6 @@ class FlowLayout(QLayout):
 
     def minimumSize(self):
         size = QSize(60, 40)
-        print(self.itemList)
         return size
 
     def doLayout(self, rect, testOnly):

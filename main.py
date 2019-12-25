@@ -17,6 +17,7 @@ color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 
 #TODO: fix when rgb colours get converted to a hex 100 and break the colour picking
 #TODO: make a multi-pick function, not sure if its gunna be C++ or python
+#TODO: check when manual resize is performed, probably can just check for non-even window dimensions
 
 
 class Window(QWidget):

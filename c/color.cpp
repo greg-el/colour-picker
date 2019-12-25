@@ -11,7 +11,7 @@ extern "C"
 #endif
 
 
-unsigned long makeHex(int x, int y) {
+void getColor(int x, int y, int *r, int *g, int *b) {
     Display* d = XOpenDisplay((char *)NULL);
     XColor c;
     XImage *image;
@@ -19,7 +19,9 @@ unsigned long makeHex(int x, int y) {
     c.pixel = XGetPixel(image,0,0);
     XFree(image);
     XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-    unsigned long hex = ((c.red/256 & 0xff) << 16) + ((c.green/256 & 0xff) << 8) + (c.blue/256 & 0xff);
+    *r = c.red;
+    *g = c.green;
+    *b = c.blue;
+    //unsigned long hex = ((c.red/256 & 0xff) << 16) + ((c.green/256 & 0xff) << 8) + (c.blue/256 & 0xff);
     XCloseDisplay(d);
-    return hex;
 }

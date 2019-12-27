@@ -24,10 +24,12 @@ color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 class Window(QWidget):
     resized = pyqtSignal()
     def __init__(self):
+        self.manualResize = 0
+        self.horizontalButtonCount = 1
+        self.autoResize = 0
         super(Window, self).__init__()
         self.flowLayout = FlowLayout()
-        self.resized.connect(self.detectManualResize)
-        self.manualResize = 0
+        self.resized.connect(self.onResize)
         addColorButton = QPushButton("+", self)
         addColorButton.clicked.connect(self.addButton)
         addColorButton.setStyleSheet("border-radius: 5px; font-size: 20px; height:40px; width:60px; color: rgba(255, 255, 255, 255); background-color: rgba(255, 255, 255, 30);")
@@ -39,38 +41,49 @@ class Window(QWidget):
 
     @pyqtSlot()
     def addButton(self):
+        self.autoResize = 1
         rgbColor = getRGBClickColor()
         color = rgbToHex(rgbColor.r, rgbColor.g, rgbColor.b)
-        button = QPushButton(color, self)
-        button.clicked.connect(lambda:self.printName(button))
-        colorFactor = 20
         darkenText = darkenColor(rgbColor.r, rgbColor.g, rgbColor.b)
         textColor = rgbToHex(darkenText.r, darkenText.g, darkenText.b)
         if (rgbColor.r*0.299 + rgbColor.g*0.587 + rgbColor.b*0.114) < 149:
             lightenText = lightenColor(rgbColor.r, rgbColor.g, rgbColor.b)
             textColor = rgbToHex(lightenText.r, lightenText.g, lightenText.b)
+
+        button = QPushButton(color, self)
+        button.clicked.connect(lambda:self.printName(button))
         self.flowLayout.addWidget(button)
         button.setStyleSheet(f"border-radius: 5px; height:40px; width:60px; background-color: {color}; color: {textColor};")
-        if not self.manualResize:
-            if self.flowLayout.count() <= 8:
-                self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.flowLayout.count()*60+1, self.frameGeometry().height()))
-            elif self.flowLayout.count() > 8:
-                self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 81))
-            elif self.flowLayout.count() > 16:
-                self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 121))
+        self.setWindowSize()
+        self.roundDownWindowSize()
         
+        
+    def setWindowSize(self):
+        if not self.manualResize:
+            print(self.getHorizontalButtonCount())
+            horizontal = self.getHorizontalButtonCount()*60+1
+            self.setGeometry(QRect(self.pos().x(), self.pos().y(), horizontal, 21+(60*self.getNumRows())))
+        
+        self.autoResize = 0
+
 
     @pyqtSlot()
     def printName(self, button):
         pyperclip.copy(button.text())
 
+    def setHorizontalButtonCount(self, n):
+        self.horizontalButtonCount = n
+
+    def getHorizontalButtonCount(self):
+        return self.horizontalButtonCount
+
+    def getNumRows(self):
+        return int(self.frameGeometry().height()/60)+1
+
 
     def moveEvent(self, e):
         self.x = self.pos().x()
         self.y = self.pos().y()
-        
-       
-        print(self.manualResize)
         super(Window, self).moveEvent(e)
 
     
@@ -78,11 +91,17 @@ class Window(QWidget):
         self.resized.emit()
         return super(Window, self).resizeEvent(e)
 
-    def detectManualResize(self):
-         if self.flowLayout.count() > 2:
-            print(f'width: {self.frameGeometry().width()} layout: {self.flowLayout.count()*60+1}')
-            if self.frameGeometry().width() != self.flowLayout.count()*60+1:
-                self.manualResize = 1
+    def onResize(self):
+        self.setHorizontalButtonCount(int(self.frameGeometry().width() / 60)+1)
+        if self.autoResize != 1:
+            self.manualResize = 1
+        
+
+    def roundDownWindowSize(self):
+        nearestButtonIntW = int(self.frameGeometry().width()/60)+1
+        nearestButtonIntH = int(self.frameGeometry().height()/40)
+        print(nearestButtonIntH, nearestButtonIntW)
+        self.setGeometry(QRect(self.pos().x(), self.pos().y(), nearestButtonIntH*60, nearestButtonIntW*40))
 
 
 

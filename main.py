@@ -4,7 +4,7 @@ import sys
 import time
 
 from os import getenv
-from PyQt5.QtCore import QPoint, QRect, QSize, Qt, pyqtSlot
+from PyQt5.QtCore import QPoint, QRect, QSize, Qt, pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import (QApplication, QLayout, QPushButton, QSizePolicy, QWidget)
 from Xlib import X, display
 
@@ -17,19 +17,23 @@ color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 
 #TODO: fix when rgb colours get converted to a hex 100 and break the colour picking
 #TODO: make a multi-pick function, not sure if its gunna be C++ or python
-#TODO: check when manual resize is performed, probably can just check for non-even window dimensions
+#TODO: check when manual resize is performed, probably can just check for non-even window dimensions -- think this is done, keep an eye on
+#TODO: make the window fit new colours added even after manually resizing
 
 
 class Window(QWidget):
+    resized = pyqtSignal()
     def __init__(self):
         super(Window, self).__init__()
         self.flowLayout = FlowLayout()
+        self.resized.connect(self.detectManualResize)
+        self.manualResize = 0
         addColorButton = QPushButton("+", self)
         addColorButton.clicked.connect(self.addButton)
-        addColorButton.setStyleSheet("border-radius: 5px; font-size: 20px; height:40px; width:61px; color: rgba(255, 255, 255, 255); background-color: rgba(255, 255, 255, 30);")
+        addColorButton.setStyleSheet("border-radius: 5px; font-size: 20px; height:40px; width:60px; color: rgba(255, 255, 255, 255); background-color: rgba(255, 255, 255, 30);")
         self.flowLayout.addWidget(addColorButton)
         self.setLayout(self.flowLayout)
-        self.setWindowTitle("Pallet")
+        self.setWindowTitle("Pallete")
         self.setAttribute(Qt.WA_TranslucentBackground);
 
 
@@ -46,15 +50,14 @@ class Window(QWidget):
             lightenText = lightenColor(rgbColor.r, rgbColor.g, rgbColor.b)
             textColor = rgbToHex(lightenText.r, lightenText.g, lightenText.b)
         self.flowLayout.addWidget(button)
-        button.setStyleSheet(f"border-radius: 5px; height:40px; width:61px; background-color: {color}; color: {textColor};")
-        print(self.flowLayout.count()*60)
-
-        if self.flowLayout.count() <= 8:
-            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.flowLayout.count()*61+1, self.frameGeometry().height()))
-        elif self.flowLayout.count() > 8:
-            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 81))
-        elif self.flowLayout.count() > 16:
-            self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 121))
+        button.setStyleSheet(f"border-radius: 5px; height:40px; width:60px; background-color: {color}; color: {textColor};")
+        if not self.manualResize:
+            if self.flowLayout.count() <= 8:
+                self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.flowLayout.count()*60+1, self.frameGeometry().height()))
+            elif self.flowLayout.count() > 8:
+                self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 81))
+            elif self.flowLayout.count() > 16:
+                self.setGeometry(QRect(self.pos().x(), self.pos().y(), self.frameGeometry().width(), 121))
         
 
     @pyqtSlot()
@@ -65,7 +68,22 @@ class Window(QWidget):
     def moveEvent(self, e):
         self.x = self.pos().x()
         self.y = self.pos().y()
+        
+       
+        print(self.manualResize)
         super(Window, self).moveEvent(e)
+
+    
+    def resizeEvent(self, e):
+        self.resized.emit()
+        return super(Window, self).resizeEvent(e)
+
+    def detectManualResize(self):
+         if self.flowLayout.count() > 2:
+            print(f'width: {self.frameGeometry().width()} layout: {self.flowLayout.count()*60+1}')
+            if self.frameGeometry().width() != self.flowLayout.count()*60+1:
+                self.manualResize = 1
+
 
 
 class FlowLayout(QLayout):

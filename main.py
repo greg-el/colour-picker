@@ -23,7 +23,9 @@ color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 
 class Window(QWidget):
     resized = pyqtSignal()
+
     def __init__(self):
+        self.maxButtons = 8
         self.manualResize = 0
         self.horizontalButtonCount = 1
         self.autoResize = 0
@@ -51,19 +53,19 @@ class Window(QWidget):
             textColor = rgbToHex(lightenText.r, lightenText.g, lightenText.b)
 
         button = QPushButton(color, self)
-        button.clicked.connect(lambda:self.printName(button))
+        button.clicked.connect(lambda: self.printName(button))
         self.flowLayout.addWidget(button)
         button.setStyleSheet(f"border-radius: 5px; height:40px; width:60px; background-color: {color}; color: {textColor};")
         self.setWindowSize()
-        self.roundDownWindowSize()
-        
-        
+        #self.roundDownWindowSize()
+
+
     def setWindowSize(self):
-        if not self.manualResize:
-            print(self.getHorizontalButtonCount())
+        horizontal = self.frameGeometry().width()
+        if self.maxButtons <= self.getHorizontalButtonCount():
             horizontal = self.getHorizontalButtonCount()*60+1
-            self.setGeometry(QRect(self.pos().x(), self.pos().y(), horizontal, 21+(60*self.getNumRows())))
-        
+
+        self.setGeometry(QRect(self.pos().x(), self.pos().y(), horizontal, 21+(60*self.getNumRows())))
         self.autoResize = 0
 
 
@@ -78,31 +80,30 @@ class Window(QWidget):
         return self.horizontalButtonCount
 
     def getNumRows(self):
-        return int(self.frameGeometry().height()/60)+1
-
+        print(self.maxButtons)
+        print(self.frameGeometry().width()/60)
+        return int(self.maxButtons/(self.frameGeometry().width()/60)+1)
 
     def moveEvent(self, e):
         self.x = self.pos().x()
         self.y = self.pos().y()
         super(Window, self).moveEvent(e)
 
-    
     def resizeEvent(self, e):
         self.resized.emit()
         return super(Window, self).resizeEvent(e)
 
     def onResize(self):
+        print("")
         self.setHorizontalButtonCount(int(self.frameGeometry().width() / 60)+1)
-        if self.autoResize != 1:
-            self.manualResize = 1
-        
+        #if self.autoResize != 1:
+        #    self.manualResize = 1
 
     def roundDownWindowSize(self):
         nearestButtonIntW = int(self.frameGeometry().width()/60)+1
         nearestButtonIntH = int(self.frameGeometry().height()/40)
         print(nearestButtonIntH, nearestButtonIntW)
         self.setGeometry(QRect(self.pos().x(), self.pos().y(), nearestButtonIntH*60, nearestButtonIntW*40))
-
 
 
 class FlowLayout(QLayout):
@@ -115,7 +116,6 @@ class FlowLayout(QLayout):
 
         self.setSpacing(spacing)
         self.arrangeAddButton()
-
 
     def __del__(self):
         item = self.takeAt(0)

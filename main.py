@@ -17,25 +17,25 @@ color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 
 #TODO: fix when rgb colours get converted to a hex 100 and break the colour picking
 #TODO: make a multi-pick function, not sure if its gunna be C++ or python
-#TODO: check when manual resize is performed, probably can just check for non-even window dimensions -- think this is done, keep an eye on
-#TODO: make the window fit new colours added even after manually resizing
+#TODO: make the window snap to a multiple of the button size after a resize event
+
 
 
 class Window(QWidget):
     resized = pyqtSignal()
 
     def __init__(self):
-        self.maxButtons = 8
-        self.manualResize = 0
-        self.horizontalButtonCount = 1
-        self.autoResize = 0
         super(Window, self).__init__()
+        self.x = self.pos().x()
+        self.y = self.pos().y()
         self.flowLayout = FlowLayout()
+        self.row_max = 8
+        self.manual_resize = 1
         self.resized.connect(self.onResize)
-        addColorButton = QPushButton("+", self)
-        addColorButton.clicked.connect(self.addButton)
-        addColorButton.setStyleSheet("border-radius: 5px; font-size: 20px; height:40px; width:60px; color: rgba(255, 255, 255, 255); background-color: rgba(255, 255, 255, 30);")
-        self.flowLayout.addWidget(addColorButton)
+        add_color_button = QPushButton("+", self)
+        add_color_button.clicked.connect(self.addButton)
+        add_color_button.setStyleSheet("border-radius: 5px; font-size: 20px; height:40px; width:60px; color: rgba(255, 255, 255, 255); background-color: rgba(255, 255, 255, 30);")
+        self.flowLayout.addWidget(add_color_button)
         self.setLayout(self.flowLayout)
         self.setWindowTitle("Pallete")
         self.setAttribute(Qt.WA_TranslucentBackground);
@@ -43,46 +43,37 @@ class Window(QWidget):
 
     @pyqtSlot()
     def addButton(self):
-        self.autoResize = 1
-        rgbColor = getRGBClickColor()
-        color = rgbToHex(rgbColor.r, rgbColor.g, rgbColor.b)
-        darkenText = darkenColor(rgbColor.r, rgbColor.g, rgbColor.b)
-        textColor = rgbToHex(darkenText.r, darkenText.g, darkenText.b)
-        if (rgbColor.r*0.299 + rgbColor.g*0.587 + rgbColor.b*0.114) < 149:
-            lightenText = lightenColor(rgbColor.r, rgbColor.g, rgbColor.b)
-            textColor = rgbToHex(lightenText.r, lightenText.g, lightenText.b)
+        print(f"self.row_max = {self.row_max}")
+        self.manual_resize = 0
+        rgb_color = getRGBClickColor()
+        hex_color = rgbToHex(rgb_color.r, rgb_color.g, rgb_color.b)
+        darken_text = darkenColor(rgb_color.r, rgb_color.g, rgb_color.b)
+        text_color = rgbToHex(darken_text.r, darken_text.g, darken_text.b)
+        if (rgb_color.r*0.299 + rgb_color.g*0.587 + rgb_color.b*0.114) < 149:
+            lighten_text = lightenColor(rgb_color.r, rgb_color.g, rgb_color.b)
+            text_color = rgbToHex(lighten_text.r, lighten_text.g, lighten_text.b)
 
-        button = QPushButton(color, self)
+        button = QPushButton(hex_color, self)
         button.clicked.connect(lambda: self.printName(button))
-        self.flowLayout.addWidget(button)
-        button.setStyleSheet(f"border-radius: 5px; height:40px; width:60px; background-color: {color}; color: {textColor};")
-        self.setWindowSize()
-        #self.roundDownWindowSize()
+        button.setStyleSheet(f"border-radius: 5px; height:40px; width:60px; background-color: {hex_color}; color: {text_color};")
 
+        self.flowLayout.addWidget(button)
+        self.setWindowSize()
+        self.manual_resize = 1
 
     def setWindowSize(self):
         horizontal = self.frameGeometry().width()
-        if self.maxButtons <= self.getHorizontalButtonCount():
-            horizontal = self.getHorizontalButtonCount()*60+1
+        if self.flowLayout.count() <= self.row_max:
+            horizontal = self.flowLayout.count()*60+1
 
-        self.setGeometry(QRect(self.pos().x(), self.pos().y(), horizontal, 21+(60*self.getNumRows())))
-        self.autoResize = 0
+        self.setGeometry(QRect(self.pos().x(), self.pos().y(), horizontal, self.get_row_count()*41-1))
 
+    def get_row_count(self):
+        return int(((self.flowLayout.count()-1)/self.row_max)+1)
 
     @pyqtSlot()
     def printName(self, button):
         pyperclip.copy(button.text())
-
-    def setHorizontalButtonCount(self, n):
-        self.horizontalButtonCount = n
-
-    def getHorizontalButtonCount(self):
-        return self.horizontalButtonCount
-
-    def getNumRows(self):
-        print(self.maxButtons)
-        print(self.frameGeometry().width()/60)
-        return int(self.maxButtons/(self.frameGeometry().width()/60)+1)
 
     def moveEvent(self, e):
         self.x = self.pos().x()
@@ -94,16 +85,19 @@ class Window(QWidget):
         return super(Window, self).resizeEvent(e)
 
     def onResize(self):
-        print("")
-        self.setHorizontalButtonCount(int(self.frameGeometry().width() / 60)+1)
-        #if self.autoResize != 1:
-        #    self.manualResize = 1
+        if self.flowLayout.count() > 2:
+            if self.manual_resize == 1:
+                new_row_max = int(self.frameGeometry().width() / 60)
+                self.row_max = new_row_max
 
-    def roundDownWindowSize(self):
-        nearestButtonIntW = int(self.frameGeometry().width()/60)+1
-        nearestButtonIntH = int(self.frameGeometry().height()/40)
-        print(nearestButtonIntH, nearestButtonIntW)
-        self.setGeometry(QRect(self.pos().x(), self.pos().y(), nearestButtonIntH*60, nearestButtonIntW*40))
+    def mousePressEvent(self, e):
+        if e.buttons() & Qt.LeftButton:
+            print(e)
+
+
+
+
+
 
 
 class FlowLayout(QLayout):

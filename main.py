@@ -1,12 +1,9 @@
 import ctypes
 import pyperclip
 import sys
-import time
 
-from os import getenv
-from PyQt5.QtCore import QPoint, QRect, QSize, Qt, pyqtSlot, pyqtSignal
+from PyQt5.QtCore import QPoint, QRect, QSize, Qt, pyqtSlot, pyqtSignal, QEvent
 from PyQt5.QtWidgets import (QApplication, QLayout, QPushButton, QSizePolicy, QWidget)
-from Xlib import X, display
 
 coord = ctypes.CDLL('./obj/coords.so')
 coord.coordinates.restype = ctypes.c_int * 2
@@ -20,21 +17,27 @@ color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 #TODO: make the window snap to a multiple of the button size after a resize event
 
 
-
 class Window(QWidget):
     resized = pyqtSignal()
 
     def __init__(self):
         super(Window, self).__init__()
+
         self.x = self.pos().x()
         self.y = self.pos().y()
         self.flowLayout = FlowLayout()
         self.row_max = 8
-        self.manual_resize = 1
+        self.manual_resize = 0
         self.resized.connect(self.onResize)
         add_color_button = QPushButton("+", self)
         add_color_button.clicked.connect(self.addButton)
-        add_color_button.setStyleSheet("border-radius: 5px; font-size: 20px; height:40px; width:60px; color: rgba(255, 255, 255, 255); background-color: rgba(255, 255, 255, 30);")
+        add_color_button.setStyleSheet("""
+            border-radius: 5px;
+            font-size: 20px;
+            height:40px; width:60px;
+            color: rgba(255, 255, 255, 255);
+            background-color: rgba(255, 255, 255, 30);
+        """)
         self.flowLayout.addWidget(add_color_button)
         self.setLayout(self.flowLayout)
         self.setWindowTitle("Pallete")
@@ -43,7 +46,6 @@ class Window(QWidget):
 
     @pyqtSlot()
     def addButton(self):
-        print(f"self.row_max = {self.row_max}")
         self.manual_resize = 0
         rgb_color = getRGBClickColor()
         hex_color = rgbToHex(rgb_color.r, rgb_color.g, rgb_color.b)
@@ -62,6 +64,7 @@ class Window(QWidget):
         self.manual_resize = 1
 
     def setWindowSize(self):
+        print(self.row_max)
         horizontal = self.frameGeometry().width()
         if self.flowLayout.count() <= self.row_max:
             horizontal = self.flowLayout.count()*60+1
@@ -85,16 +88,9 @@ class Window(QWidget):
         return super(Window, self).resizeEvent(e)
 
     def onResize(self):
-        if self.flowLayout.count() > 2:
-            if self.manual_resize == 1:
-                new_row_max = int(self.frameGeometry().width() / 60)
-                self.row_max = new_row_max
-
-    def mousePressEvent(self, e):
-        if e.buttons() & Qt.LeftButton:
-            print(e)
-
-
+        if self.manual_resize == 1:
+            new_row_max = int(self.frameGeometry().width() / 60)
+            self.row_max = new_row_max
 
 
 
@@ -115,6 +111,8 @@ class FlowLayout(QLayout):
         item = self.takeAt(0)
         while item:
             item = self.takeAt(0)
+
+
 
     def addItem(self, item):
         self.itemList.insert(-1, item)

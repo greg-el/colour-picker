@@ -2,8 +2,9 @@ import ctypes
 import pyperclip
 import sys
 
-from PyQt5.QtCore import QPoint, QRect, QSize, Qt, pyqtSlot, pyqtSignal, QEvent
-from PyQt5.QtWidgets import (QApplication, QLayout, QPushButton, QSizePolicy, QWidget)
+
+from PyQt5.QtCore import QPoint, QRect, QSize, Qt, pyqtSignal, QEvent
+from PyQt5.QtWidgets import QApplication, QLayout, QPushButton, QSizePolicy, QWidget
 
 coord = ctypes.CDLL('./obj/coords.so')
 coord.coordinates.restype = ctypes.c_int * 2
@@ -15,6 +16,8 @@ color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 #TODO: fix when rgb colours get converted to a hex 100 and break the colour picking
 #TODO: make a multi-pick function, not sure if its gunna be C++ or python
 #TODO: make the window snap to a multiple of the button size after a resize event
+
+
 
 
 class Window(QWidget):
@@ -30,7 +33,7 @@ class Window(QWidget):
         self.manual_resize = 0
         self.resized.connect(self.onResize)
         add_color_button = QPushButton("+", self)
-        add_color_button.clicked.connect(self.addButton)
+        add_color_button.clicked.connect(self.add_color_handle)
         add_color_button.setStyleSheet("""
             border-radius: 5px;
             font-size: 20px;
@@ -38,33 +41,64 @@ class Window(QWidget):
             color: rgba(255, 255, 255, 255);
             background-color: rgba(255, 255, 255, 30);
         """)
+
         self.flowLayout.addWidget(add_color_button)
         self.setLayout(self.flowLayout)
         self.setWindowTitle("Pallete")
         self.setAttribute(Qt.WA_TranslucentBackground);
 
+    def add_color_handle(self):
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers == Qt.ControlModifier:
+            self.multi_add()
+        else:
+            self.add_button()
 
-    @pyqtSlot()
-    def addButton(self):
+    def multi_add(self):
+        end = True
+        while end:
+            self.add_button()
+            self.set_window_size()
+            if self.flowLayout.count() > 16:
+                end = False
+
+    def create_button(self):
+        rgb_color = rgb_click_color()
+        if rgb_color:
+            hex_color = rgb_to_hex(rgb_color.r, rgb_color.g, rgb_color.b)
+            darken_text = darkenColor(rgb_color.r, rgb_color.g, rgb_color.b)
+            text_color = rgb_to_hex(darken_text.r, darken_text.g, darken_text.b)
+            if (rgb_color.r * 0.299 + rgb_color.g * 0.587 + rgb_color.b * 0.114) < 149:
+                lighten_text = lightenColor(rgb_color.r, rgb_color.g, rgb_color.b)
+                text_color = rgb_to_hex(lighten_text.r, lighten_text.g, lighten_text.b)
+
+            button = QPushButton(hex_color, self)
+            button.clicked.connect(lambda: pyperclip.copy(button.text()))
+            button.setContextMenuPolicy(Qt.CustomContextMenu)
+            button.customContextMenuRequested.connect(lambda: self.remove_button(button))
+            button.setStyleSheet(
+                f"border-radius: 5px; height:40px; width:60px; background-color: {hex_color}; color: {text_color};")
+            button.setProperty("colour", hex_color)
+            return button
+        return False
+
+    def add_button(self):
         self.manual_resize = 0
-        rgb_color = getRGBClickColor()
-        hex_color = rgbToHex(rgb_color.r, rgb_color.g, rgb_color.b)
-        darken_text = darkenColor(rgb_color.r, rgb_color.g, rgb_color.b)
-        text_color = rgbToHex(darken_text.r, darken_text.g, darken_text.b)
-        if (rgb_color.r*0.299 + rgb_color.g*0.587 + rgb_color.b*0.114) < 149:
-            lighten_text = lightenColor(rgb_color.r, rgb_color.g, rgb_color.b)
-            text_color = rgbToHex(lighten_text.r, lighten_text.g, lighten_text.b)
+        button = self.create_button()
+        if button:
+            self.flowLayout.addWidget(button)
+            self.set_window_size()
 
-        button = QPushButton(hex_color, self)
-        button.clicked.connect(lambda: self.printName(button))
-        button.setStyleSheet(f"border-radius: 5px; height:40px; width:60px; background-color: {hex_color}; color: {text_color};")
-
-        self.flowLayout.addWidget(button)
-        self.setWindowSize()
         self.manual_resize = 1
 
-    def setWindowSize(self):
-        print(self.row_max)
+    def remove_button(self, button):
+        self.manual_resize = 0
+        button.setParent(None)
+        self.set_window_size()
+        self.manual_resize = 1
+
+    def set_window_size(self):
+        print(self.flowLayout.count())
         horizontal = self.frameGeometry().width()
         if self.flowLayout.count() <= self.row_max:
             horizontal = self.flowLayout.count()*60+1
@@ -73,10 +107,6 @@ class Window(QWidget):
 
     def get_row_count(self):
         return int(((self.flowLayout.count()-1)/self.row_max)+1)
-
-    @pyqtSlot()
-    def printName(self, button):
-        pyperclip.copy(button.text())
 
     def moveEvent(self, e):
         self.x = self.pos().x()
@@ -91,9 +121,6 @@ class Window(QWidget):
         if self.manual_resize == 1:
             new_row_max = int(self.frameGeometry().width() / 60)
             self.row_max = new_row_max
-
-
-
 
 
 class FlowLayout(QLayout):
@@ -111,6 +138,7 @@ class FlowLayout(QLayout):
         item = self.takeAt(0)
         while item:
             item = self.takeAt(0)
+
 
 
 
@@ -163,6 +191,7 @@ class FlowLayout(QLayout):
         x = rect.x()
         y = rect.y()
         lineHeight = 0
+
         for item in self.itemList:
             wid = item.widget()
             spaceX = self.spacing() + wid.style().layoutSpacing(QSizePolicy.PushButton, QSizePolicy.PushButton, Qt.Horizontal)
@@ -183,7 +212,7 @@ class FlowLayout(QLayout):
         return y + lineHeight - rect.y()
 
 
-class Click_Coordinates():
+class ClickCoordinates:
     def __init__(self, arr):
         self.x = arr[0]
         self.y = arr[1]
@@ -192,7 +221,7 @@ class Click_Coordinates():
         return f'x:{self.x} y:{self.y}'
 
 
-class RGB():
+class RGB:
     def __init__(self, r, g, b):
         self.r = r
         self.g = g
@@ -200,42 +229,44 @@ class RGB():
 
 
 def lightenColor(r, g, b):
-    colorFactor = 70
-    if r+colorFactor < 255:
-        r = r+colorFactor
+    color_factor = 70
+    if r+color_factor < 255:
+        r = r+color_factor
     else:
         r = 255
-    if g+colorFactor < 255:
-        g = g+colorFactor
+    if g+color_factor < 255:
+        g = g+color_factor
     else:
         g = 255
-    if b+colorFactor < 255:
-        b = b+colorFactor
+    if b+color_factor < 255:
+        b = b+color_factor
     else:
         b = 255
     return RGB(r, g, b)
 
 
 def darkenColor(r, g, b):
-    colorFactor = 100
-    if r-colorFactor > 0:
-        r = r-colorFactor
+    color_factor = 100
+    if r-color_factor > 0:
+        r = r-color_factor
     else:
         r = 0
-    if g-colorFactor > 0:
-        g = g-colorFactor
+    if g-color_factor > 0:
+        g = g-color_factor
     else:
         g = 0
-    if b-colorFactor > 0:
-        b = b-colorFactor
+    if b-color_factor > 0:
+        b = b-color_factor
     else:
         b = 0
     return RGB(r, g, b)
 
 
-def getRGBClickColor():
+def rgb_click_color():
     coords = coord.coordinates()
-    c = Click_Coordinates([x for x in coords])
+    c = ClickCoordinates([x for x in coords])
+    if c.x == -1 and c.y == -1:
+        return False
     r = ctypes.c_int(0)
     g = ctypes.c_int(0)
     b = ctypes.c_int(0)
@@ -243,7 +274,7 @@ def getRGBClickColor():
     return RGB(round(r.value/256), round(g.value/256), round(b.value/256))
 
 
-def rgbToHex(r, g, b):
+def rgb_to_hex(r, g, b):
     return "#{:02x}{:02x}{:02x}".format(r,g,b)
 
 

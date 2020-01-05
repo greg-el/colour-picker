@@ -14,8 +14,8 @@ color.getColor.restype = ctypes.POINTER(ctypes.c_int)
 color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 
 #TODO: fix when rgb colours get converted to a hex 100 and break the colour picking
-#TODO: make a multi-pick function, not sure if its gunna be C++ or python
 #TODO: make the window snap to a multiple of the button size after a resize event
+#TODO: change the cursor when picking colours
 
 
 
@@ -25,7 +25,6 @@ class Window(QWidget):
 
     def __init__(self):
         super(Window, self).__init__()
-
         self.x = self.pos().x()
         self.y = self.pos().y()
         self.flowLayout = FlowLayout()
@@ -47,20 +46,17 @@ class Window(QWidget):
         self.setWindowTitle("Pallete")
         self.setAttribute(Qt.WA_TranslucentBackground);
 
+
     def add_color_handle(self):
         modifiers = QApplication.keyboardModifiers()
         if modifiers == Qt.ControlModifier:
-            self.multi_add()
+            self.add_multi()
         else:
             self.add_button()
 
-    def multi_add(self):
-        end = True
-        while end:
-            self.add_button()
-            self.set_window_size()
-            if self.flowLayout.count() > 16:
-                end = False
+    def mouseReleaseEvent(self, QMouseEvent):
+        if QMouseEvent.button() == Qt.RightButton:
+            print("resize window")
 
     def create_button(self):
         rgb_color = rgb_click_color()
@@ -91,6 +87,17 @@ class Window(QWidget):
 
         self.manual_resize = 1
 
+    def add_multi(self):
+        run = True
+        while run:
+            button = self.create_button()
+            if not button:
+                run = False
+            if button:
+                self.flowLayout.addWidget(button)
+                self.set_window_size()
+                QApplication.processEvents()
+
     def remove_button(self, button):
         self.manual_resize = 0
         button.setParent(None)
@@ -98,7 +105,7 @@ class Window(QWidget):
         self.manual_resize = 1
 
     def set_window_size(self):
-        print(self.flowLayout.count())
+        print(self.get_row_count())
         horizontal = self.frameGeometry().width()
         if self.flowLayout.count() <= self.row_max:
             horizontal = self.flowLayout.count()*60+1
@@ -138,9 +145,6 @@ class FlowLayout(QLayout):
         item = self.takeAt(0)
         while item:
             item = self.takeAt(0)
-
-
-
 
     def addItem(self, item):
         self.itemList.insert(-1, item)
@@ -275,7 +279,7 @@ def rgb_click_color():
 
 
 def rgb_to_hex(r, g, b):
-    return "#{:02x}{:02x}{:02x}".format(r,g,b)
+    return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
 
 if __name__ == "__main__":

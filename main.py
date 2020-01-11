@@ -14,7 +14,7 @@ color.getColor.restype = ctypes.POINTER(ctypes.c_int)
 color.getColor.argtypes = [ctypes.c_int, ctypes.c_int]
 
 
-#TODO: add Vbox next to flowbox to keep controls in
+#TODO: fix vbox/hbox with controls in
 
 class UI(Gtk.Window):
     def __init__(self):
@@ -25,22 +25,20 @@ class UI(Gtk.Window):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
-        self.flowbox = Gtk.FlowBox()
-        self.flowbox.set_valign(Gtk.Align.START)
-        self.flowbox.set_max_children_per_line(8)
-        self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.vbox = Gtk.VBox()
+        self.hbox = Gtk.HBox()
 
         provider = Gtk.CssProvider()
         button_css = """
-            button {
-                background: rgba(255, 255, 255, 0.5);
+                    button {
+                        background: rgba(255, 255, 255, 0.5);
 
-                border: none;
-                border-radius: 0px;
-                outline: none;
-                box-shadow: none;
-            }
-        """
+                        border: none;
+                        border-radius: 0px;
+                        outline: none;
+                        box-shadow: none;
+                    }
+                """
         button_css_bytes = bytes(button_css.encode())
 
         add_color_button = Gtk.Button.new_with_label("+")
@@ -51,13 +49,22 @@ class UI(Gtk.Window):
         add_color_button.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         add_color_button.get_style_context().add_class("button")
 
-        self.flowbox.add(add_color_button)
+        self.hbox.add(add_color_button)
 
+
+
+
+        self.flowbox = Gtk.FlowBox()
+        self.flowbox.set_valign(Gtk.Align.START)
+        self.flowbox.set_max_children_per_line(8)
+        self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
         scrolled.add(self.flowbox)
 
+        self.vbox.pack_start(self.hbox, expand=False, fill=False, padding=0)
+        self.vbox.pack_start(self.flowbox, expand=True, fill=True, padding=0)
 
-        self.add(scrolled)
 
+        self.add(self.vbox)
 
 
     def add_color(self, button):
